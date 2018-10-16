@@ -34,9 +34,16 @@ class MovistarM2MServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/movistarm2m.php', 'movistarm2m');
 
         // Register the service the package provides.
-        $this->app->singleton('movistarm2m', function ($app) {
-            return new MovistarM2M;
+        $this->app->singleton('movistarm2m', function () {
+            $movistar = new Api(config('movistarm2m.apiKey'));
+            return MovistarM2M($movistar);
+            
         });
+        
+        
+        $this->app->alias(MovistarM2M::class, 'movistarm2m');
+        
+        
     }
 
     /**

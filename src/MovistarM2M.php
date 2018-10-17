@@ -8,7 +8,6 @@ use GuzzleHttp\Exception\ClientException;
 use Config;
 
 class MovistarM2M {
-
     const STATUS_ACTIVATION_PENDANT = 'ACTIVATION_PENDANT';
     const STATUS_ACTIVATION_READY = 'ACTIVATION_READY';
     const STATUS_INACTIVE_NEW = 'INACTIVE_NEW';

@@ -11,8 +11,9 @@ class MovistarM2M extends Facade
      *
      * @return string
      */
+    
     protected static function getFacadeAccessor()
     {
-        return 'movistarm2m';
+        return 'MovistarM2M';
     }
 }

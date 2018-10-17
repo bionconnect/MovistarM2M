@@ -4,6 +4,7 @@ namespace BionConnection\MovistarM2M;
 
 use Illuminate\Support\ServiceProvider;
 
+
 class MovistarM2MServiceProvider extends ServiceProvider
 {
     protected $defer = false;
@@ -24,7 +25,8 @@ class MovistarM2MServiceProvider extends ServiceProvider
     public function register()
     {
    
-        
+        $this->mergeConfigFrom(dirname(__FILE__).'/../config/movistarm2m.php', 'movistarm2m');
+
         
         $this->app->singleton('MovistarM2M', function() {
 
@@ -39,9 +41,9 @@ class MovistarM2MServiceProvider extends ServiceProvider
 		  $loader->alias('MovistarM2M', 'BionConnection\MovistarM2M\Facades\MovistarM2M');
 
 		});
-		$this->publishes([
-			dirname(__FILE__).'/../config/movistarm2m.php'=>config_path('movistarm2m.php'),
-		]);
+		/*$this->publishes([
+			dirname(__FILE__).'/../config/movistarm2m.php'=>config_path('movistarm2m'),
+		]);*/
         
      
         

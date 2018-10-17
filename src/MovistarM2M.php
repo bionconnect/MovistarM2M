@@ -1,86 +1,138 @@
 <?php
+
 namespace BionConnection\MovistarM2M;
-use Illuminate\Support\ServiceProvider;
+
+use InvalidArgumentException;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\ClientException;
 use Config;
-use Exception;
+
+class MovistarM2M {
+
+    const STATUS_ACTIVATION_PENDANT = 'ACTIVATION_PENDANT';
+    const STATUS_ACTIVATION_READY = 'ACTIVATION_READY';
+    const STATUS_INACTIVE_NEW = 'INACTIVE_NEW';
+    const STATUS_DEACTIVATED = "DEACTIVATED";
+    const STATUS_RETIRED = "RETIRED";
+    const TIMEOUT = 10;
+
+    private $uri_key_pem = '';
+    private $uri_ca_pem = '';
+    private $api_endpoint = '';
+    private $request_successful = false;
+    private $last_error = '';
+    private $last_response = array();
+    private $last_request = array();
+    private $response;
+
+    public function __construct() {
+
+        $this->uri_key_pem = config('movistarm2m.uri_key_pem');
+        $this->uri_ca_pem = config('movistarm2m.uri_ca_pem');
+        $this->response = null;
+        $this->api_endpoint = config('movistarm2m.url');
+        $this->client = new Client(['http_errors' => false]);
+        
+    }
+
+    public function getSims($icc = null, $inactive_new = null) {
+        $param = array();
+        if (isset($icc)) {
+            $param["icc"] = $icc;
+        }
+        if (isset($inactive_new)) {
+            $param["lifeCycleState"] = STATUS_INACTIVE_NEW;
+        }
 
 
+       $this->makeRequest("get", "Inventory/v6/r12/sim", $param);
+    }
 
-class MovistarM2M extends ServiceProvider
-{
+    private function changeSimStatus($icc, $status) {
+        $param = array("lifeCycleState" => $status);
+        return $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $param);
+    }
 
-   public function execute($action, $params=[])
-	{
+    public function changeSimCommercialPlan($icc, $id_commercial_plan) {
 
-		// Initiate
+        $param = array("commercialGroup" => $id_commercial_plan);
+        return $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $param);
+    }
 
-		$params['username'] 	= config('whmcs.username');
-		$params['responsetype'] = config('whmcs.responsetype','json');
-		$params['action']		= $action;
+    private function changeExpenseLimit($icc, array $expense) {
+        $expenseMovistar = array();
 
-		$auth_type = config('whmcs.auth_type', 'password');
+        $limites = array();
+        foreach ($expense as $key => $value) {
+            switch ($key) {
+                case "SMS":
+                    $limites["smsEnabled"] = true;
+                    $limites["smsLimit"] = $value;
+                    break;
+                case "DATA":
+                    $limites["dataEnabled"] = true;
+                    $limites["dataLimit"] = $value;
+                    break;
+                case "VOICE":
+                    $limites["voiceEnabled"] = true;
+                    $limites["voiceLimit"] = $value;
+                    break;
+            }
+        }
 
-		switch($auth_type)
-		{
-			case 'api':
-			if(false === Config::has('whmcs.password') || '' === config('whmcs.password'))
-				throw new Exception("Please provide api key for authentication");
-			$params['accesskey'] = config('whmcs.password');
-			break;
-			case 'password':
-			if(false === Config::has('whmcs.password') || '' === config('whmcs.password'))
-				throw new Exception("Please provide username password for authentication");
-			$params['password'] 	= md5(config('whmcs.password'));
-			break;
-		}
+        $expenseMovistar["monthlyConsumptionThreshold"] = $limites;
+        return $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $expenseMovistar);
+    }
 
-		$url = config('whmcs.url');
-		// unset url
-		unset($params['url']);
-		$client = new Client(['defaults' => ['headers' => ['User-Agent' => null]]]);
-		try
-		{
-			$response = $client->post($url, ['form_params' => $params,'timeout' => 1200,'connect_timeout' => 10]);
+    public function activateSim($icc, $id_commercial_plan = null, array $expense = null) {
+        $sim = $this->getSims($icc);
+        if ($sim) { ///evaluo si si esta suspendido
+            $this->changeCommercialPlan($icc, $id_commercial_plan); // cambio el plan comercial
+            $this->changeExpenseLimit($icc, $expense); // cambio los limites
+            $this->changeSimStatus($icc, STATUS_ACTIVATION_PENDANT); // Cambio el sim a activacion pendiente
+        }
+    }
 
-			try
-			{
-				return $this->processResponse(json_decode($response->getBody()->getContents(), true));
-			}
-			catch(ParseException $e)
-			{
-				return $this->processResponse($response->xml());
-			}
-		}
-		catch(ClientException $e)
-		{
-			$response = json_decode($e->getResponse()->getBody()->getContents(), true);
-			throw new Exception($response['message']);
-		}
+    public function suspendSim($icc) {
 
-	}
+        $this->changeSimStatus($icc, STATUS_DEACTIVATED); // Cambio el sim suspendida
+    }
 
-	public function processResponse($response)
-	{
-		if(isset($response['result']) && 'error' === $response['result']
-			|| isset($response['status']) && 'error' === $response['status'] )
-			throw new Exception("WHMCS Response Error : ".$response['message']);
-		return json_decode(json_encode($response),'array'===config('whmcs.response', 'object'));
-	}
+    public function terminateSim($icc) {
+        $this->changeSimStatus($icc, STATUS_RETIRED); // Cambio el sim RETIRED
+    }
 
-	// using magic method
-	public function __call($action, $params)
-	{
-		return $this->execute($action, $params);
-	}
-    
+    public function getLocationSim($icc) {
+
+        return $this->makeRequest("get", "Inventory/v6/r12/sim/icc:" . $icc . "/location");
+    }
+
+    public function getSimStatusGSM() {
+
+        return $this->makeRequest("get", "Inventory/v6/r12/sim/icc:" . $icc . "/syncDiagnostic/gsm");
+    }
+
+    private function makeRequest($http_verb, $method, $args = array(), $timeout = self::TIMEOUT) {
+        unset($this->response);
+        $url = $this->api_endpoint . '/' . $method;
+        switch ($http_verb) {
+            case 'post':
+                break;
+            case 'get':
+                $this->response = $this->client->get($url, ['cert' => $this->uri_ca_pem, 'ssl_key' => $this->uri_key_pem, 'query' => $args, 'timeout' => $timeout])->getBody();
+                return $this->response;
+                break;
+            case 'delete':
+
+                break;
+            case 'patch':
+
+                break;
+            case 'put':
+                return $this->client->put($url, ['cert' => $this->uri_ca_pem, 'ssl_key' => $this->uri_key_pem, 'body' => $args, 'timeout' => $timeout])->getBody();
+
+                break;
+        }
+    }
+
 }
-
-
-
-
-/* 
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-

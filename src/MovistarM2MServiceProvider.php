@@ -41,7 +41,7 @@ class MovistarM2MServiceProvider extends ServiceProvider
         });
         
         
-        $this->app->alias(MovistarM2M::class, 'movistarm2m');
+     
         
         
     }

@@ -64,15 +64,15 @@ class MovistarM2M {
         $limites = array();
         foreach ($expense as $key => $value) {
             switch ($key) {
-                case "SMS":
+                case "LIMITSMSOUT":
                     $limites["smsEnabled"] = true;
                     $limites["smsLimit"] = $value;
                     break;
-                case "DATA":
+                case "LIMITDATA":
                     $limites["dataEnabled"] = true;
                     $limites["dataLimit"] = $value;
                     break;
-                case "VOICE":
+                case "LIMITVOICEOUT":
                     $limites["voiceEnabled"] = true;
                     $limites["voiceLimit"] = $value;
                     break;

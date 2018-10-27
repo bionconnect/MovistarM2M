@@ -8,6 +8,7 @@ use GuzzleHttp\Exception\ClientException;
 use Config;
 
 class MovistarM2M {
+
     const STATUS_ACTIVATION_PENDANT = 'ACTIVATION_PENDANT';
     const STATUS_ACTIVATION_READY = 'ACTIVATION_READY';
     const STATUS_INACTIVE_NEW = 'INACTIVE_NEW';
@@ -31,7 +32,6 @@ class MovistarM2M {
         $this->response = null;
         $this->api_endpoint = config('movistarm2m.url');
         $this->client = new Client(['http_errors' => false]);
-        
     }
 
     public function getSims($icc = null, $inactive_new = null) {
@@ -44,7 +44,7 @@ class MovistarM2M {
         }
 
 
-       $this->makeRequest("get", "Inventory/v6/r12/sim", $param);
+        $this->makeRequest("get", "Inventory/v6/r12/sim", $param);
     }
 
     private function changeSimStatus($icc, $status) {
@@ -85,11 +85,19 @@ class MovistarM2M {
 
     public function activateSim($icc, $id_commercial_plan = null, array $expense = null) {
         $sim = $this->getSims($icc);
+        $respuesta = true;
         if ($sim) { ///evaluo si si esta suspendido
-            $this->changeCommercialPlan($icc, $id_commercial_plan); // cambio el plan comercial
-            $this->changeExpenseLimit($icc, $expense); // cambio los limites
-            $this->changeSimStatus($icc, STATUS_ACTIVATION_PENDANT); // Cambio el sim a activacion pendiente
+            if (!$this->changeCommercialPlan($icc, $id_commercial_plan)) {
+                $respuesta = false;
+            }; // cambio el plan comercial
+            if (!$this->changeExpenseLimit($icc, $expense)) {
+                $respuesta = false;
+            }; // cambio los limites
+            if ($this->changeSimStatus($icc, STATUS_ACTIVATION_PENDANT)) {
+                $respuesta = false;
+            }
         }
+        return $respuesta;
     }
 
     public function suspendSim($icc) {

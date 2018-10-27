@@ -34,34 +34,45 @@ class MovistarM2M {
         $this->client = new Client(['http_errors' => false]);
     }
 
-    public function getSims($icc = null, $inactive_new = null) {
+    public function getSims($icc = null, $inactive_new = null,$maxreg = null) {
         $param = array();
         if (isset($icc)) {
             $param["icc"] = $icc;
         }
         if (isset($inactive_new)) {
-            $param["lifeCycleState"] = STATUS_INACTIVE_NEW;
+          $param["lifeCycleState"] = self::STATUS_INACTIVE_NEW;
+        }
+        if(isset($maxreg)){
+              $param["maxBatchSize"] = $maxreg; 
         }
 
-
-        $this->makeRequest("get", "Inventory/v6/r12/sim", $param);
+        return $this->makeRequest("get", "Inventory/v6/r12/sim", $param);
     }
 
     private function changeSimStatus($icc, $status) {
-        $param = array("lifeCycleState" => $status);
-        return $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $param);
+      $param = array("lifeCycleStatus" => $status);
+      $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $param);
+      
+      return $this->request_successful;
     }
 
     public function changeSimCommercialPlan($icc, $id_commercial_plan) {
 
         $param = array("commercialGroup" => $id_commercial_plan);
-        return $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $param);
+
+       $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $param);
+       return $this->request_successful;
     }
 
     private function changeExpenseLimit($icc, array $expense) {
         $expenseMovistar = array();
 
         $limites = array();
+        
+        $limites["smsEnabled"] = false;
+          $limites["dataEnabled"] = false;
+          $limites["voiceEnabled"] = false;
+        
         foreach ($expense as $key => $value) {
             switch ($key) {
                 case "LIMITSMSOUT":
@@ -78,24 +89,36 @@ class MovistarM2M {
                     break;
             }
         }
-
+        
         $expenseMovistar["monthlyConsumptionThreshold"] = $limites;
-        return $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $expenseMovistar);
+        $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $expenseMovistar);
+        
+       
+        return $this->request_successful;
+        
     }
 
     public function activateSim($icc, $id_commercial_plan = null, array $expense = null) {
-        $sim = $this->getSims($icc);
+       $sim = $this->getSims($icc);
+     
         $respuesta = true;
-        if ($sim) { ///evaluo si si esta suspendido
-            if (!$this->changeCommercialPlan($icc, $id_commercial_plan)) {
-                $respuesta = false;
-            }; // cambio el plan comercial
-            if (!$this->changeExpenseLimit($icc, $expense)) {
-                $respuesta = false;
+   
+     if (isset($sim)) {
+            if (!$this->changeSimCommercialPlan($icc, $id_commercial_plan)) {
+                   echo "cambiar plan";
+               return false;
+            };// cambio el plan comercial
+             if (!$this->changeExpenseLimit($icc, $expense)) {
+                 echo "cambiar limites";
+                 return false;
+                 
             }; // cambio los limites
-            if ($this->changeSimStatus($icc, STATUS_ACTIVATION_PENDANT)) {
-                $respuesta = false;
+            if (!$this->changeSimStatus($icc, self::STATUS_ACTIVATION_READY)) {
+echo "cambiar status";
+                return false;
             }
+            
+            
         }
         return $respuesta;
     }
@@ -121,13 +144,14 @@ class MovistarM2M {
 
     private function makeRequest($http_verb, $method, $args = array(), $timeout = self::TIMEOUT) {
         unset($this->response);
-        $url = $this->api_endpoint . '/' . $method;
+        $this->request_successful = false;
+        $url = $this->api_endpoint .  $method;
+
         switch ($http_verb) {
             case 'post':
                 break;
             case 'get':
-                $this->response = $this->client->get($url, ['cert' => $this->uri_ca_pem, 'ssl_key' => $this->uri_key_pem, 'query' => $args, 'timeout' => $timeout])->getBody();
-                return $this->response;
+                $this->response = $this->client->get($url, ['cert' => $this->uri_ca_pem, 'ssl_key' => $this->uri_key_pem, 'query' => $args, 'timeout' => $timeout]);
                 break;
             case 'delete':
 
@@ -136,10 +160,35 @@ class MovistarM2M {
 
                 break;
             case 'put':
-                return $this->client->put($url, ['cert' => $this->uri_ca_pem, 'ssl_key' => $this->uri_key_pem, 'body' => $args, 'timeout' => $timeout])->getBody();
+                $this->response =  $this->client->put($url, ['cert' => $this->uri_ca_pem, 'ssl_key' => $this->uri_key_pem, 'body' => json_encode($args), 'timeout' => $timeout]);
 
                 break;
         }
+           
+        
+echo $this->response->getStatusCode();
+        switch ($this->response->getStatusCode()) {
+            case 200:
+                $this->request_successful = true;
+                return json_decode($this->response->getBody());
+                break;
+            case 401;
+              
+                break;
+            case 204: //borrado correctamente
+                $this->request_successful = true;
+                break;
+            case 409:
+                break;
+            case 400:
+             print_r($this->response);
+                break;
+            default :
+                return json_decode($this->response->getBody());
+                break;
+        }
+        
+        
     }
 
 }

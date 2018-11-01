@@ -14,7 +14,7 @@ class MovistarM2M {
     const STATUS_INACTIVE_NEW = 'INACTIVE_NEW';
     const STATUS_DEACTIVATED = "DEACTIVATED";
     const STATUS_RETIRED = "RETIRED";
-    const TIMEOUT = 10;
+    const TIMEOUT = 20;
 
     private $uri_key_pem = '';
     private $uri_ca_pem = '';
@@ -127,7 +127,7 @@ class MovistarM2M {
         return $this->makeRequest("get", "Inventory/v6/r12/sim/icc:" . $icc . "/location");
     }
 
-    public function getSimStatusGSM() {
+    public function getSimStatusGSM($icc) {
 
         return $this->makeRequest("get", "Inventory/v6/r12/sim/icc:" . $icc . "/syncDiagnostic/gsm");
     }

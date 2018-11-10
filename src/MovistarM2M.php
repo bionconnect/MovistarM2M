@@ -13,6 +13,7 @@ class MovistarM2M {
     const STATUS_ACTIVATION_READY = 'ACTIVATION_READY';
     const STATUS_INACTIVE_NEW = 'INACTIVE_NEW';
     const STATUS_DEACTIVATED = "DEACTIVATED";
+    const ACTIVE = "ACTIVE";
     const STATUS_RETIRED = "RETIRED";
     const TIMEOUT = 20;
 
@@ -72,7 +73,7 @@ class MovistarM2M {
             switch ($key) {
                 case "LIMITDATA":
                     $limites["dataEnabled"] = "true";
-                     $limites["dataLimit"] = "$value";
+                     $limites["dataLimit"] = $value * 1048576;
                     break;
                 case "LIMITVOICEOUT":
                     $limites["voiceEnabled"] = "false";
@@ -115,11 +116,14 @@ class MovistarM2M {
 
     public function suspendSim($icc) {
 
-        $this->changeSimStatus($icc, STATUS_DEACTIVATED); // Cambio el sim suspendida
+       return $this->changeSimStatus($icc, self::STATUS_DEACTIVATED); // Cambio el sim suspendida
     }
+  public function reactivateSim($icc) {
 
+       return $this->changeSimStatus($icc, self::ACTIVE); // Cambio el sim suspendida
+    }
     public function terminateSim($icc) {
-        $this->changeSimStatus($icc, STATUS_RETIRED); // Cambio el sim RETIRED
+        return $this->changeSimStatus($icc, self::STATUS_DEACTIVATED); // Cambio el sim RETIRED
     }
 
     public function getLocationSim($icc) {
@@ -155,7 +159,6 @@ class MovistarM2M {
 
                 break;
         }
-
 
            switch ($this->response->getStatusCode()) {
             case 200:

@@ -108,7 +108,7 @@ class MovistarM2M {
             }; // cambio los limites
             if (!$this->changeSimStatus($icc, self::STATUS_ACTIVATION_READY)) {
 
-               // return false;
+               return false;
             }
         }
         return $respuesta;

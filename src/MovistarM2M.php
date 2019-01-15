@@ -104,13 +104,13 @@ class MovistarM2M {
                 return false;
             }; // cambio el plan comercial
             if (!$this->changeExpenseLimit($icc, $expense)) {
-                print_r($expense);
+             
                 
-                echo "Error ex:: " . $icc;
-                //return false;
+           
+                return false;
             }; // cambio los limites
             if (!$this->changeSimStatus($icc, self::STATUS_ACTIVATION_READY)) {
-                echo "Error ex";
+                echo "Error sim";
                 return false;
             }
         }

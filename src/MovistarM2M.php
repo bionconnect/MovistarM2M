@@ -100,17 +100,16 @@ class MovistarM2M {
 
         if (isset($sim)) {
             if (!$this->changeSimCommercialPlan($icc, $id_commercial_plan)) {
-                echo "Error Plan";
+   
                 return false;
             }; // cambio el plan comercial
             if (!$this->changeExpenseLimit($icc, $expense)) {
-             
-                 echo "Error ex";
+
            
                 return false;
             }; // cambio los limites
             if (!$this->changeSimStatus($icc, self::STATUS_ACTIVATION_READY)) {
-                echo "Error sim";
+
                 return false;
             }
         }
@@ -164,8 +163,7 @@ class MovistarM2M {
 
                 break;
         }
-                echo "Estado:" .  $this->response->getStatusCode();
-print_r($this->response->getBody());
+    echo $this->response->getStatusCode();
         switch ($this->response->getStatusCode()) {
             case 200:
                 $this->request_successful = true;

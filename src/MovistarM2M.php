@@ -73,7 +73,7 @@ class MovistarM2M {
             switch ($key) {
                 case "LIMITDATA":
                     $limites["dataEnabled"] = "true";
-                     $limites["dataLimit"] = $value * 1048576;
+                    $limites["dataLimit"] = $value * 1048576;
                     break;
                 case "LIMITVOICEOUT":
                     $limites["voiceEnabled"] = "false";
@@ -86,7 +86,7 @@ class MovistarM2M {
         }
         $expenseMovistar["monthlyConsumptionThreshold"] = $limites;
 
-        
+
         $this->makeRequest("put", "Inventory/v6/r12/sim/icc:" . $icc, $expenseMovistar);
 
 
@@ -100,15 +100,16 @@ class MovistarM2M {
 
         if (isset($sim)) {
             if (!$this->changeSimCommercialPlan($icc, $id_commercial_plan)) {
-
+                echo "Error Plan";
                 return false;
             }; // cambio el plan comercial
             if (!$this->changeExpenseLimit($icc, $expense)) {
+                echo "Error ex";
                 return false;
             }; // cambio los limites
             if (!$this->changeSimStatus($icc, self::STATUS_ACTIVATION_READY)) {
-
-               return false;
+                echo "Error ex";
+                return false;
             }
         }
         return $respuesta;
@@ -116,12 +117,14 @@ class MovistarM2M {
 
     public function suspendSim($icc) {
 
-       return $this->changeSimStatus($icc, self::STATUS_DEACTIVATED); // Cambio el sim suspendida
+        return $this->changeSimStatus($icc, self::STATUS_DEACTIVATED); // Cambio el sim suspendida
     }
-  public function reactivateSim($icc) {
 
-       return $this->changeSimStatus($icc, self::ACTIVE); // Cambio el sim suspendida
+    public function reactivateSim($icc) {
+
+        return $this->changeSimStatus($icc, self::ACTIVE); // Cambio el sim suspendida
     }
+
     public function terminateSim($icc) {
         return $this->changeSimStatus($icc, self::STATUS_DEACTIVATED); // Cambio el sim RETIRED
     }
@@ -160,7 +163,7 @@ class MovistarM2M {
                 break;
         }
 
-           switch ($this->response->getStatusCode()) {
+        switch ($this->response->getStatusCode()) {
             case 200:
                 $this->request_successful = true;
                 return json_decode($this->response->getBody());

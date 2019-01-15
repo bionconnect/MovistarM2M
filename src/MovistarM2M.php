@@ -107,7 +107,7 @@ class MovistarM2M {
                 print_r($expense);
                 
                 echo "Error ex:: " . $icc;
-                return false;
+                //return false;
             }; // cambio los limites
             if (!$this->changeSimStatus($icc, self::STATUS_ACTIVATION_READY)) {
                 echo "Error ex";

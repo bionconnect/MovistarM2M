@@ -164,7 +164,8 @@ class MovistarM2M {
 
                 break;
         }
-
+                echo "Estado:" .  $this->response->getStatusCode();
+print_r($this->response->getBody());
         switch ($this->response->getStatusCode()) {
             case 200:
                 $this->request_successful = true;
@@ -182,6 +183,7 @@ class MovistarM2M {
                 $this->last_error = $this->response;
                 break;
             default :
+
                 return json_decode($this->response->getBody());
                 break;
         }
